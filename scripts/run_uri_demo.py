@@ -20,7 +20,9 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from txpower.ercot_prices import synthetic_uri_spp, align_price_to_usage
+from txpower.ercot_prices import (
+    synthetic_uri_spp, align_price_to_usage, load_spp_annual_xlsx, find_ercot_2021_file,
+)
 from txpower.efl_parser import parse_efl
 from txpower.models import Contract, RateType, TduCharges
 from txpower.cost_engine import simulate_month
@@ -62,7 +64,19 @@ def main() -> None:
     if not EFL.exists():
         raise SystemExit(f"Missing sample EFL at {EFL}. See README data section.")
 
-    spp = synthetic_uri_spp()
+    # Try to load real ERCOT 2021 SPP; fall back to synthetic
+    ercot_path = find_ercot_2021_file()
+    if ercot_path:
+        try:
+            spp = load_spp_annual_xlsx(ercot_path, settlement_point="LZ_NORTH")
+            print(f"✓ Loaded real ERCOT 2021 SPP from {ercot_path.name}")
+        except Exception as e:
+            print(f"⚠ Failed to load ERCOT file ({e}); using synthetic.")
+            spp = synthetic_uri_spp()
+    else:
+        print("ℹ No ERCOT 2021 file found (data/raw/ercot/ or ~/Downloads/). Using synthetic SPP.")
+        spp = synthetic_uri_spp()
+
     usage = synthetic_winter_consumption()
     fixed = parse_efl(EFL, "SmartEnergy", "SmartGreen 12 (fixed)")
     indexed = griddy_style_contract()
@@ -101,8 +115,8 @@ def _plot(spp, usage, fixed) -> None:
              label="Wholesale pass-through (Griddy-style)")
     ax1.set_ylabel("Cumulative cost ($)")
     ax1.legend(loc="upper left", frameon=False)
-    ax1.set_title("Feb 2021 cumulative cost: same home, same usage  "
-                  "(ILLUSTRATIVE / synthetic)")
+    data_label = "real ERCOT SPP" if not spp.attrs.get("synthetic") else "synthetic SPP"
+    ax1.set_title(f"Feb 2021 cumulative cost: same home, same usage  ({data_label})")
     ax1.axvspan(*band, alpha=0.10, color="red")
     ax2.plot(spp.index, spp.values, color="#444", lw=0.8)
     ax2.set_ylabel("SPP ($/kWh)")
