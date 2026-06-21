@@ -28,18 +28,15 @@ python scripts/run_uri_demo.py   # prints the bill comparison, writes the chart
 - `scripts/fetch_efls.py` — batch-download the shortlisted EFLs.
 
 ## What's SYNTHETIC (clearly labeled — replace with real data)
-1. **Feb-2021 consumption.** One Austin-metro home from full Dataport academic
-   access (dataport.pecanstreet.org). The `pecanstreet.load_home()` function is
-   implemented; ready to consume real CSV once downloaded.
-2. **The indexed contract.** Recover a real pre-Uri Indexed/Variable plan via
-   `wayback.py` (see "Time travel" in README) and replace the Griddy-style
-   stand-in in `scripts/run_uri_demo.py`.
+**Feb-2021 consumption.** One Austin-metro home from full Dataport academic
+access (dataport.pecanstreet.org). The `pecanstreet.load_home()` function is
+implemented; ready to consume real CSV once downloaded.
 
 ## Suggested next steps (good Claude Code tasks)
 - [x] Implement `pecanstreet.load_home` against a real Dataport CSV; add a test.
 - [x] Pull real ERCOT 2021 SPP; verify LZ_NORTH parses; re-run the demo on real
       prices and drop the "synthetic" labels from the chart.
-- [ ] Recover a Feb-2021 all-offers snapshot (`wayback.list_snapshots`); load
+- [x] Recover a Feb-2021 all-offers snapshot (`wayback.list_snapshots`); load
       Oncor Variable/Indexed plans; pick the real indexed contract.
 - [ ] Extend `efl_parser` for **time-of-use** plans (multiple energy rates +
       hour-of-day schedule) — the "free nights" structures.
