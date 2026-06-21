@@ -36,13 +36,47 @@ def load_home(
     """Load one home's whole-home draw as kWh per interval.
 
     Returns a timestamp-indexed Series of kWh per interval, ready for the
-    cost engine. TODO: confirm exact column names against the downloaded CSV
-    (Kaggle vs Dataport exports differ slightly).
+    cost engine. Supports both Kaggle (3-day sample) and Dataport (full-year)
+    CSV exports. If dataid is provided, filters to that home only.
+
+    Args:
+        path: CSV file path (Kaggle or Dataport export).
+        dataid: Optional home ID to filter on. If None, assumes single home.
+        timestamp_col: Column name for timestamps (default "localminute").
+        billing_col: Column name for whole-home power in kW (default "grid").
+        interval_minutes: Duration of each interval in minutes (default 1.0).
+
+    Returns:
+        Timestamp-indexed Series of kWh per interval, timezone-aware ("America/Chicago").
+
+    Raises:
+        ValueError: If required columns are missing from CSV.
     """
-    raise NotImplementedError(
-        "Implement against the real CSV once downloaded; confirm the timestamp "
-        "and whole-home column names, which differ between Kaggle and Dataport."
-    )
+    df = pd.read_csv(path)
+
+    if timestamp_col not in df.columns:
+        raise ValueError(
+            f"Missing timestamp column '{timestamp_col}'. Available: {list(df.columns)}"
+        )
+    if billing_col not in df.columns:
+        raise ValueError(
+            f"Missing billing column '{billing_col}'. Available: {list(df.columns)}"
+        )
+
+    if dataid is not None and "dataid" in df.columns:
+        df = df[df["dataid"] == dataid]
+
+    df[timestamp_col] = pd.to_datetime(df[timestamp_col])
+    df = df.set_index(timestamp_col).sort_index()
+
+    if df.index.tz is None:
+        df.index = df.index.tz_localize("America/Chicago")
+
+    power_kw = df[billing_col].astype(float)
+    usage_kwh = to_kwh(power_kw, interval_minutes)
+    usage_kwh.name = "consumption_kwh"
+
+    return usage_kwh
 
 
 def to_kwh(power_kw: pd.Series, interval_minutes: float) -> pd.Series:
