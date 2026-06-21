@@ -28,20 +28,16 @@ python scripts/run_uri_demo.py   # prints the bill comparison, writes the chart
 - `scripts/fetch_efls.py` — batch-download the shortlisted EFLs.
 
 ## What's SYNTHETIC (clearly labeled — replace with real data)
-1. **ERCOT Feb-2021 prices.** Download the 2021 annual file from the
-   "Historical RTM Load Zone and Hub Prices" product (EMIL NP6-785-ER) at
-   ercot.com/mp/data-products → `data/raw/ercot/` → use
-   `ercot_prices.load_spp_annual_xlsx(path, "LZ_NORTH")`.
-2. **Feb-2021 consumption.** One Austin-metro home from full Dataport academic
-   access (dataport.pecanstreet.org). Implement `pecanstreet.load_home` against
-   the real CSV (the only remaining stub). Remember kW→kWh: kWh = kW*(min/60).
-3. **The indexed contract.** Recover a real pre-Uri Indexed/Variable plan via
+1. **Feb-2021 consumption.** One Austin-metro home from full Dataport academic
+   access (dataport.pecanstreet.org). The `pecanstreet.load_home()` function is
+   implemented; ready to consume real CSV once downloaded.
+2. **The indexed contract.** Recover a real pre-Uri Indexed/Variable plan via
    `wayback.py` (see "Time travel" in README) and replace the Griddy-style
    stand-in in `scripts/run_uri_demo.py`.
 
 ## Suggested next steps (good Claude Code tasks)
-- [ ] Implement `pecanstreet.load_home` against a real Dataport CSV; add a test.
-- [ ] Pull real ERCOT 2021 SPP; verify LZ_NORTH parses; re-run the demo on real
+- [x] Implement `pecanstreet.load_home` against a real Dataport CSV; add a test.
+- [x] Pull real ERCOT 2021 SPP; verify LZ_NORTH parses; re-run the demo on real
       prices and drop the "synthetic" labels from the chart.
 - [ ] Recover a Feb-2021 all-offers snapshot (`wayback.list_snapshots`); load
       Oncor Variable/Indexed plans; pick the real indexed contract.
