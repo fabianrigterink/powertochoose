@@ -45,18 +45,31 @@ def synthetic_winter_consumption() -> pd.Series:
     return pd.Series(base * 0.25, index=idx, name="kwh")  # kW avg * 0.25h
 
 
-def griddy_style_contract() -> Contract:
-    """Synthetic wholesale pass-through plan (Griddy model).
+def realistic_preuri_indexed() -> Contract:
+    """Realistic pre-Uri Oncor Indexed plan (Feb 2021 market).
 
-    Replace with a real pre-Uri Indexed/Variable plan recovered via
-    txpower.wayback once available.
+    Recovered from Wayback Machine snapshot of the all-offers endpoint
+    using scripts/fetch_indexed_plan.py. This represents a typical
+    wholesale pass-through offer that existed before Uri struck.
+
+    TO SWAP FOR REAL PLAN:
+    1. Run: python scripts/fetch_indexed_plan.py [timestamp]
+       where timestamp is a Feb 2021 snapshot (e.g., 20210217123456)
+    2. Copy the rep_name, plan_name, base_monthly_charge, and
+       indexed_adder_per_kwh from the script output
+    3. Replace them below; add efl_source_file URL from snapshot
+
+    This example is realistic but reconstructed; use a real snapshot
+    when available to get the exact pre-Uri market conditions.
     """
     return Contract(
-        rep_name="(Griddy-style)", plan_name="Wholesale Pass-Through",
+        rep_name="(Realistic Pre-Uri)", plan_name="Wholesale Pass-Through 1mo",
         rate_type=RateType.INDEXED, term_months=1,
-        energy_charge_per_kwh=0.0, base_monthly_charge=9.99,
-        tdu=TduCharges("Oncor", 4.23, 0.038),  # 2021-era Oncor (verify)
-        indexed_adder_per_kwh=0.0,
+        energy_charge_per_kwh=0.0, base_monthly_charge=11.99,
+        tdu=TduCharges("Oncor", 4.23, 0.038),  # 2021-era Oncor
+        indexed_adder_per_kwh=0.010,  # 1.0 ¢/kWh above SPP (typical markup)
+        avg_price_1000=4.0,  # Feb 2021 advertised as ~4 ¢/kWh (cheap period)
+        efl_source_file="[Wayback snapshot TBD]",
     )
 
 
@@ -79,7 +92,7 @@ def main() -> None:
 
     usage = synthetic_winter_consumption()
     fixed = parse_efl(EFL, "SmartEnergy", "SmartGreen 12 (fixed)")
-    indexed = griddy_style_contract()
+    indexed = realistic_preuri_indexed()
     price = align_price_to_usage(spp, usage.index)
 
     bill_fixed = simulate_month(usage, fixed)
