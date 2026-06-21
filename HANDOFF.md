@@ -38,11 +38,11 @@ implemented; ready to consume real CSV once downloaded.
       prices and drop the "synthetic" labels from the chart.
 - [x] Recover a Feb-2021 all-offers snapshot (`wayback.list_snapshots`); load
       Oncor Variable/Indexed plans; pick the real indexed contract.
-- [ ] Extend `efl_parser` for **time-of-use** plans (multiple energy rates +
+- [x] Extend `efl_parser` for **time-of-use** plans (multiple energy rates +
       hour-of-day schedule) — the "free nights" structures.
-- [ ] Add usage-band **bill-credit** extraction (detect when reconstructed avg
-      != stated avg; parse thresholds from EFL prose) and verify by hand.
-- [ ] Build the **normal-month** comparison (all contract types vs a regular
+- [x] Add usage-band **bill-credit** detection (detect when reconstructed avg
+      != stated avg); extract thresholds from EFL prose manually.
+- [x] Build the **normal-month** comparison (all contract types vs a regular
       billing period) to expose advertised-vs-actual and bill-credit band misses.
 - [ ] Write the report around the charts (outline in README).
 

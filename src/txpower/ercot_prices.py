@@ -120,3 +120,24 @@ def align_price_to_usage(
     Both indexes must share a timezone; localize upstream if needed.
     """
     return spp_per_kwh.reindex(usage_index, method=method)
+
+
+def find_ercot_2021_file() -> Path | None:
+    """Search for ERCOT 2021 annual SPP xlsx in common locations.
+
+    Returns path if found, None otherwise. Checks:
+    - data/raw/ercot/2021*.*  (project data directory)
+    - ~/Downloads/2021*.xlsx  (user Downloads)
+    """
+    candidates = [
+        Path(__file__).resolve().parents[2] / "data" / "raw" / "ercot",
+        Path.home() / "Downloads",
+    ]
+
+    for candidate_dir in candidates:
+        if not candidate_dir.exists():
+            continue
+        for xlsx_file in candidate_dir.glob("2021*.xlsx"):
+            if "RTM" in xlsx_file.name or "SPP" in xlsx_file.name or len(xlsx_file.name) < 50:
+                return xlsx_file
+    return None

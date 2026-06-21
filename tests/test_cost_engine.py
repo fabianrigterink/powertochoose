@@ -11,7 +11,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))  # also set via pyproject pytest pythonpath
 
-from txpower.models import Contract, BillCredit, TduCharges, RateType
+from txpower.models import Contract, BillCredit, TduCharges, RateType, TouPeriod
 from txpower.cost_engine import simulate_month
 from txpower.pecanstreet import load_home, to_kwh
 
@@ -70,6 +70,57 @@ def test_indexed_plan_uses_spp():
     # the 20 spike hours dominate the energy cost
     assert bill["energy"] > 200  # far above the ~$33 a flat plan would see
     print("indexed plan:", bill)
+
+
+def test_tou_plan_basic():
+    oncor = TduCharges("Oncor", fixed_monthly=4.23, per_kwh=0.038)
+    tou_schedule = [
+        TouPeriod(hour_start=14, hour_end=21, rate_per_kwh=0.125),  # peak 2pm-9pm
+        TouPeriod(hour_start=6, hour_end=14, rate_per_kwh=0.083),   # off-peak 6am-2pm
+        TouPeriod(hour_start=21, hour_end=6, rate_per_kwh=0.0),     # free nights 9pm-6am
+    ]
+    c = Contract(
+        rep_name="TestREP", plan_name="Free Nights TOU",
+        rate_type=RateType.TOU, term_months=12,
+        energy_charge_per_kwh=0.0, tdu=oncor, tou_schedule=tou_schedule,
+    )
+    # Create usage: 1 kWh per hour across full day (24 hours)
+    idx = pd.date_range("2021-02-01 00:00", periods=24, freq="h", tz="America/Chicago")
+    usage = pd.Series(1.0, index=idx)
+    bill = simulate_month(usage, c)
+    # Energy cost: 9 free hours + 8 off-peak (8*0.083=0.664) + 7 peak (7*0.125=0.875) = 1.539
+    expected_energy = 8 * 0.083 + 7 * 0.125
+    assert abs(bill["energy"] - expected_energy) < 0.01, f"Expected ~{expected_energy}, got {bill['energy']}"
+    print("tou plan:", bill)
+
+
+def test_tou_plan_vs_fixed():
+    oncor = TduCharges("Oncor", fixed_monthly=4.23, per_kwh=0.038)
+    # Same TOU structure
+    tou_schedule = [
+        TouPeriod(hour_start=14, hour_end=21, rate_per_kwh=0.125),
+        TouPeriod(hour_start=6, hour_end=14, rate_per_kwh=0.083),
+        TouPeriod(hour_start=21, hour_end=6, rate_per_kwh=0.0),
+    ]
+    tou = Contract(
+        rep_name="TestREP", plan_name="Free Nights TOU",
+        rate_type=RateType.TOU, term_months=12,
+        energy_charge_per_kwh=0.0, tdu=oncor, tou_schedule=tou_schedule,
+    )
+    # Equivalent fixed plan: simple average ~0.065 ¢/kWh
+    fixed = Contract(
+        rep_name="TestREP", plan_name="Fixed Equivalent",
+        rate_type=RateType.FIXED, term_months=12,
+        energy_charge_per_kwh=0.065, tdu=oncor,
+    )
+    idx = pd.date_range("2021-02-01 00:00", periods=240, freq="h", tz="America/Chicago")
+    usage = pd.Series(1.0, index=idx)
+    bill_tou = simulate_month(usage, tou)
+    bill_fixed = simulate_month(usage, fixed)
+    # TOU should be cheaper due to free nights
+    assert bill_tou["energy"] < bill_fixed["energy"], "TOU with free nights should be cheaper"
+    print(f"tou vs fixed: tou_energy={bill_tou['energy']:.2f}, fixed_energy={bill_fixed['energy']:.2f}")
+
 
 
 def test_load_home_flat_usage():
@@ -170,6 +221,8 @@ if __name__ == "__main__":
     test_fixed_plan_basic()
     test_bill_credit_band_hit_and_miss()
     test_indexed_plan_uses_spp()
+    test_tou_plan_basic()
+    test_tou_plan_vs_fixed()
     test_load_home_flat_usage()
     test_load_home_minute_intervals()
     test_load_home_with_dataid()

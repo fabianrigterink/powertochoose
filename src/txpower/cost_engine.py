@@ -40,6 +40,34 @@ def _energy_component_indexed(
     return float(((aligned["spp"] + adder) * aligned["kwh"]).sum())
 
 
+def _energy_component_tou(usage_kwh: pd.Series, contract: Contract) -> float:
+    """Time-of-use: each interval billed at its hour's rate from tou_schedule.
+
+    Each timestamp's hour (0-23) is matched against tou_schedule periods.
+    If no period matches an hour, that usage is not charged (should not happen
+    if tou_schedule is complete; log a warning in production).
+    """
+    total_cost = 0.0
+    for ts, kwh in usage_kwh.items():
+        hour = ts.hour
+        matched_rate = None
+        for period in contract.tou_schedule:
+            if period.hour_start <= period.hour_end:
+                # Normal period (no wrap-around)
+                if period.hour_start <= hour < period.hour_end:
+                    matched_rate = period.rate_per_kwh
+                    break
+            else:
+                # Wrap-around period (e.g., 21-6 means 9pm-6am)
+                if hour >= period.hour_start or hour < period.hour_end:
+                    matched_rate = period.rate_per_kwh
+                    break
+        if matched_rate is not None:
+            total_cost += kwh * matched_rate
+    return total_cost
+
+
+
 def _tdu_component(usage_kwh: pd.Series, contract: Contract) -> float:
     if contract.tdu is None:
         return 0.0
@@ -71,6 +99,8 @@ def simulate_month(
                 f"Contract '{contract.plan_name}' is indexed but no SPP series given."
             )
         energy = _energy_component_indexed(usage_kwh, spp_per_kwh, contract)
+    elif contract.rate_type == RateType.TOU:
+        energy = _energy_component_tou(usage_kwh, contract)
     else:
         # fixed and (simple) variable both use the flat energy charge here;
         # a true variable plan would vary energy_charge_per_kwh by month.

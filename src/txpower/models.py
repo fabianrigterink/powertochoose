@@ -14,6 +14,23 @@ class RateType(str, Enum):
     FIXED = "fixed"
     VARIABLE = "variable"
     INDEXED = "indexed"  # passes through wholesale (ERCOT SPP)-linked pricing
+    TOU = "tou"  # time-of-use: multiple rates by hour-of-day
+
+
+@dataclass
+class TouPeriod:
+    """A time-of-use rate period: energy rate for a specific hour range.
+
+    Applies `rate_per_kwh` ($/kWh) for hours in [hour_start, hour_end).
+    Hours are 0-23 (clock time in local timezone). For 24-hour wraparound,
+    use two periods: e.g., hour_start=22, hour_end=6 spans 10pm-6am.
+
+    Example: peak 2pm-9pm at 12.5¢/kWh is
+        TouPeriod(hour_start=14, hour_end=21, rate_per_kwh=0.125)
+    """
+    hour_start: int            # 0-23
+    hour_end: int              # 0-23 (exclusive end)
+    rate_per_kwh: float        # $/kWh
 
 
 @dataclass
@@ -57,8 +74,11 @@ class Contract:
     term_months: int
 
     # Energy component
-    energy_charge_per_kwh: float          # $/kWh (REP's energy charge)
+    energy_charge_per_kwh: float          # $/kWh (REP's energy charge; for fixed/indexed plans)
     base_monthly_charge: float = 0.0      # $/month (REP base/minimum-usage fee)
+
+    # Time-of-use schedule (for TOU rate_type; overrides energy_charge_per_kwh)
+    tou_schedule: list[TouPeriod] = field(default_factory=list)
 
     # Usage-band credits (the tricky part of many "teaser" plans)
     bill_credits: list[BillCredit] = field(default_factory=list)
