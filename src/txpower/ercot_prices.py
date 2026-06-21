@@ -122,6 +122,47 @@ def align_price_to_usage(
     return spp_per_kwh.reindex(usage_index, method=method)
 
 
+def load_engie_hourly_csv(
+    path: str | Path,
+    settlement_point: str = "LZ_NORTH",
+    tz: str | None = CENTRAL_TZ,
+) -> pd.Series:
+    """Load ENGIE Resources hourly real-time pricing CSV.
+
+    Downloads from: https://www.engieresources.com/historical-pricing-data/
+    Select: ERCOT > LZ_NORTH > HourlyRT > date range > download CSV
+
+    Returns a tz-aware $/kWh Series at 15-min resolution.
+    """
+    df = pd.read_csv(path)
+
+    # Parse DATE + START_TIME into DatetimeIndex
+    # DATE is "DD-MMM-YYYY", START_TIME is "HH:MM"
+    df["datetime"] = pd.to_datetime(
+        df["DATE"] + " " + df["START_TIME"],
+        format="%d-%b-%Y %H:%M"
+    )
+
+    # Extract the settlement point column (should be "LZ_NORTH")
+    if settlement_point not in df.columns:
+        raise ValueError(f"Column '{settlement_point}' not found. Available: {df.columns.tolist()}")
+
+    # Parse price: remove "$" and convert to float
+    prices_str = df[settlement_point].str.replace("$", "").astype(float)
+
+    # Create Series with datetime index
+    s = pd.Series(
+        prices_str.values / 1000.0,  # $/MWh -> $/kWh
+        index=pd.DatetimeIndex(df["datetime"]),
+        name="spp_per_kwh"
+    ).sort_index()
+
+    if tz and s.index.tz is None:
+        s.index = s.index.tz_localize(tz, ambiguous="infer", nonexistent="shift_forward")
+
+    return s
+
+
 def find_ercot_2021_file() -> Path | None:
     """Search for ERCOT 2021 annual SPP xlsx in common locations.
 
@@ -140,4 +181,24 @@ def find_ercot_2021_file() -> Path | None:
         for xlsx_file in candidate_dir.glob("2021*.xlsx"):
             if "RTM" in xlsx_file.name or "SPP" in xlsx_file.name or len(xlsx_file.name) < 50:
                 return xlsx_file
+    return None
+
+
+def find_engie_csv() -> Path | None:
+    """Search for ENGIE ERCOT CSV in common locations.
+
+    Returns path if found, None otherwise. Checks:
+    - data/raw/ERCOT*.csv  (project data directory)
+    - ~/Downloads/ERCOT*.csv  (user Downloads)
+    """
+    candidates = [
+        Path(__file__).resolve().parents[2] / "data" / "raw",
+        Path.home() / "Downloads",
+    ]
+
+    for candidate_dir in candidates:
+        if not candidate_dir.exists():
+            continue
+        for csv_file in candidate_dir.glob("ERCOT*.csv"):
+            return csv_file
     return None

@@ -22,12 +22,14 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from txpower.ercot_prices import (
     synthetic_uri_spp, align_price_to_usage, load_spp_annual_xlsx, find_ercot_2021_file,
+    load_engie_hourly_csv, find_engie_csv,
 )
 from txpower.efl_parser import parse_efl
 from txpower.models import Contract, RateType, TduCharges
 from txpower.cost_engine import simulate_month
 
 EFL = ROOT / "data/raw/efl_pdfs/smartgreen12_billcredit.pdf"
+ENGIE_CSV = ROOT / "data/raw/ERCOT_Hourly_Real_Time_2026-06-21.csv"
 FIGDIR = ROOT / "reports/figures"
 
 
@@ -77,18 +79,38 @@ def main() -> None:
     if not EFL.exists():
         raise SystemExit(f"Missing sample EFL at {EFL}. See README data section.")
 
-    # Try to load real ERCOT 2021 SPP; fall back to synthetic
-    ercot_path = find_ercot_2021_file()
-    if ercot_path:
+    # Try to load real ERCOT 2021 SPP from ENGIE CSV, xlsx, or synthetic
+    spp = None
+    data_source = None
+
+    # 1. Try ENGIE CSV first
+    if ENGIE_CSV.exists():
         try:
-            spp = load_spp_annual_xlsx(ercot_path, settlement_point="LZ_NORTH")
-            print(f"✓ Loaded real ERCOT 2021 SPP from {ercot_path.name}")
+            spp = load_engie_hourly_csv(ENGIE_CSV, settlement_point="LZ_NORTH")
+            data_source = f"ENGIE ERCOT CSV ({ENGIE_CSV.name})"
         except Exception as e:
-            print(f"⚠ Failed to load ERCOT file ({e}); using synthetic.")
-            spp = synthetic_uri_spp()
-    else:
-        print("ℹ No ERCOT 2021 file found (data/raw/ercot/ or ~/Downloads/). Using synthetic SPP.")
+            print(f"⚠ Failed to load ENGIE CSV ({e}); trying xlsx...")
+            spp = None
+
+    # 2. Fall back to ERCOT annual xlsx
+    if spp is None:
+        ercot_path = find_ercot_2021_file()
+        if ercot_path:
+            try:
+                spp = load_spp_annual_xlsx(ercot_path, settlement_point="LZ_NORTH")
+                data_source = f"ERCOT annual xlsx ({ercot_path.name})"
+            except Exception as e:
+                print(f"⚠ Failed to load ERCOT xlsx ({e}); using synthetic.")
+                spp = None
+
+    # 3. Fall back to synthetic
+    if spp is None:
+        print("ℹ No real ERCOT data found. Using synthetic SPP for illustration.")
         spp = synthetic_uri_spp()
+        data_source = "synthetic SPP"
+        spp.attrs["synthetic"] = True
+    else:
+        print(f"✓ Loaded {data_source}")
 
     usage = synthetic_winter_consumption()
     fixed = parse_efl(EFL, "SmartEnergy", "SmartGreen 12 (fixed)")
