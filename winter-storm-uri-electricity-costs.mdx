@@ -24,7 +24,7 @@ Texas deregulated retail electricity in 2000. Today, customers in ERCOT-deregula
 
 We simulated bills across three datasets:
 
-1. **Pecan Street consumption data** — 15-minute electricity usage from 24 net-consumer homes in Austin, Texas, spanning a full year.
+1. **Pecan Street consumption data** — 15-minute electricity usage from all 24 available net-consumer homes in Austin, Texas (the complete dataset), spanning a full year.
 2. **October 2019 Power to Choose plans** — 1,915 real retail plans (1,711 fixed, 194 variable, 10 indexed) from the Texas market four months before Uri.
 3. **Real ERCOT wholesale prices** — hourly Settlement Point Prices (SPP) for LZ_NORTH (Oncor territory, Round Rock) from 2021, showing the actual $9,000/MWh cap during the freeze.
 
@@ -98,7 +98,7 @@ All data used in this analysis is publicly available. Here's how to reproduce it
 - **Full year:** Request university access at https://dataport.pecanstreet.org. Download household data as 15-minute CSV.
 - **Quick start:** Kaggle dataset (`bassam165/pecan-street-austin-smart-grid-energy-data`) provides a 3-day sample from 10 Austin homes.
 
-**What we used:** Full 2018 data from 25 Austin-area homes, filtered to 24 net-consumer homes (those that import more than they export). Total: 873,286 readings × 24 homes.
+**What we used:** Full 2018 data from all 24 net-consumer Austin homes available in the Pecan Street dataset (the entire dataset contains 25 homes, but one is a net exporter and excluded). Total: 873,286 readings × 24 homes.
 
 ### ERCOT wholesale prices (Settlement Point Prices)
 
