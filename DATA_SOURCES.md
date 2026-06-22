@@ -4,9 +4,48 @@ This document explains where to find and how to regenerate the real data used in
 
 ## ERCOT Wholesale Prices (Settlement Point Prices)
 
+### Primary Source: ERCOT Official Data
+**ERCOT Historical RTM Load Zone and Hub Prices (Product ID: NP6-785-ER)**  
+https://www.ercot.com/mp/data-products/data-product-details?id=np6-785-er
+
+### Download Instructions
+1. Go to https://www.ercot.com/mp/data-products/data-product-details?id=np6-785-er
+2. Select the desired year (e.g., 2021 for Winter Storm Uri analysis)
+3. Download the .zip file → contains monthly .xlsx sheets
+4. Unzip and extract the .xlsx file
+
+### File Location
+Place the unzipped .xlsx files in: **`data/raw/ercot/`**
+
+Files are auto-detected via `find_ercot_2021_file()` with naming pattern:
+- **Expected:** `rpt.00013061.0000000000000000.RTMLZHBSPP_YEAR.xlsx`
+- **Example:** `rpt.00013061.0000000000000000.RTMLZHBSPP_2021.xlsx`
+
+The scripts auto-detect ERCOT files first, then fall back to ENGIE CSV if needed.
+
+### Format
+ERCOT xlsx sheets contain:
+- **Delivery Date:** YYYY-MM-DD
+- **Delivery Hour:** 1–24 (hour-ending; hour 24 = last interval of day)
+- **Delivery Interval:** 1–4 (15-minute intervals within the hour)
+- **Settlement Point Name:** e.g., "LZ_NORTH"
+- **Settlement Point Price:** $/MWh (parser converts to $/kWh)
+
+### Integration
+- `src/txpower/ercot_prices.py:load_spp_annual_xlsx()` parses ERCOT .xlsx
+- `src/txpower/ercot_prices.py:find_ercot_2021_file()` locates 2021 file
+- `scripts/run_uri_demo.py` uses it for Feb 2021 Uri analysis
+
+---
+
+## ENGIE Resources Historical Pricing Data (Fallback)
+
 ### Source
 **ENGIE Resources Historical Pricing Data**  
 https://www.engieresources.com/historical-pricing-data/
+
+### When to Use
+Use only if ERCOT official data is unavailable. ENGIE's coverage is limited and may not span the entire analysis period.
 
 ### Download Instructions
 1. Go to https://www.engieresources.com/historical-pricing-data/
@@ -19,8 +58,6 @@ https://www.engieresources.com/historical-pricing-data/
 
 ### File Location
 Place the downloaded CSV in: **`data/raw/`**
-
-The scripts auto-detect it via `find_engie_csv()`.
 
 ### Format
 ```
@@ -36,8 +73,7 @@ The scripts auto-detect it via `find_engie_csv()`.
 
 ### Integration
 - `src/txpower/ercot_prices.py:load_engie_hourly_csv()` parses the CSV
-- `scripts/run_uri_demo.py` uses it for Feb 2021 Uri analysis
-- `scripts/run_normal_month.py` can use it for any month's wholesale prices
+- Used as fallback if ERCOT data unavailable
 
 ---
 

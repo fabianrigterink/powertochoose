@@ -30,6 +30,7 @@ from txpower.cost_engine import simulate_month
 
 EFL = ROOT / "data/raw/efl_pdfs/smartgreen12_billcredit.pdf"
 ENGIE_CSV = ROOT / "data/raw/ERCOT_Hourly_Real_Time_2026-06-21.csv"
+PTC_OCT_2019_CSV = ROOT / "data/raw/ptc_offers_20191001.csv"
 FIGDIR = ROOT / "reports/figures"
 
 
@@ -47,32 +48,64 @@ def synthetic_winter_consumption() -> pd.Series:
     return pd.Series(base * 0.25, index=idx, name="kwh")  # kW avg * 0.25h
 
 
-def realistic_preuri_indexed() -> Contract:
-    """Realistic pre-Uri Oncor Indexed plan (Feb 2021 market).
+def load_ptc_oct_2019_plans() -> tuple[Contract, Contract, Contract]:
+    """Load real Oct 2019 plans from Wayback Machine snapshot.
 
-    Recovered from Wayback Machine snapshot of the all-offers endpoint
-    using scripts/fetch_indexed_plan.py. This represents a typical
-    wholesale pass-through offer that existed before Uri struck.
-
-    TO SWAP FOR REAL PLAN:
-    1. Run: python scripts/fetch_indexed_plan.py [timestamp]
-       where timestamp is a Feb 2021 snapshot (e.g., 20210217123456)
-    2. Copy the rep_name, plan_name, base_monthly_charge, and
-       indexed_adder_per_kwh from the script output
-    3. Replace them below; add efl_source_file URL from snapshot
-
-    This example is realistic but reconstructed; use a real snapshot
-    when available to get the exact pre-Uri market conditions.
+    Returns (fixed, variable, indexed) representative plans that existed
+    4 months before Winter Storm Uri (Feb 2021). Uses actual advertised
+    prices from Power to Choose export at that time.
     """
-    return Contract(
-        rep_name="(Realistic Pre-Uri)", plan_name="Wholesale Pass-Through 1mo",
-        rate_type=RateType.INDEXED, term_months=1,
-        energy_charge_per_kwh=0.0, base_monthly_charge=11.99,
-        tdu=TduCharges("Oncor", 4.23, 0.038),  # 2021-era Oncor
-        indexed_adder_per_kwh=0.010,  # 1.0 ¢/kWh above SPP (typical markup)
-        avg_price_1000=4.0,  # Feb 2021 advertised as ~4 ¢/kWh (cheap period)
-        efl_source_file="[Wayback snapshot TBD]",
+    if not PTC_OCT_2019_CSV.exists():
+        return None
+
+    df = pd.read_csv(PTC_OCT_2019_CSV)
+
+    # Extract one representative plan from each type
+    fixed_row = df[df["[RateType]"] == "Fixed"].iloc[0]
+    var_row = df[df["[RateType]"] == "Variable"].iloc[0]
+    idx_row = df[df["[RateType]"] == "Indexed"].iloc[0]
+
+    fixed = Contract(
+        rep_name=fixed_row["[RepCompany]"],
+        plan_name=fixed_row["[Product]"],
+        rate_type=RateType.FIXED,
+        term_months=int(fixed_row["[TermValue]"]) if fixed_row["[TermValue]"] else 12,
+        energy_charge_per_kwh=float(fixed_row["[kwh1000]"]),
+        base_monthly_charge=0.0,  # Not in CSV; assume included in rate
+        tdu=TduCharges("Oncor", 4.23, 0.038),
+        etf=float(fixed_row["[CancelFee]"]) if pd.notna(fixed_row["[CancelFee]"]) else 0.0,
+        avg_price_500=float(fixed_row["[kwh500]"]),
+        avg_price_1000=float(fixed_row["[kwh1000]"]),
+        avg_price_2000=float(fixed_row["[kwh2000]"]),
+        efl_source_file=f"Wayback Oct 1, 2019: {fixed_row['[FactsURL]']}",
     )
+
+    variable = Contract(
+        rep_name=var_row["[RepCompany]"],
+        plan_name=var_row["[Product]"],
+        rate_type=RateType.VARIABLE,
+        term_months=int(var_row["[TermValue]"]) if var_row["[TermValue]"] else 1,
+        energy_charge_per_kwh=float(var_row["[kwh1000]"]),
+        base_monthly_charge=0.0,
+        tdu=TduCharges("Oncor", 4.23, 0.038),
+        avg_price_1000=float(var_row["[kwh1000]"]),
+        efl_source_file="Wayback Oct 1, 2019",
+    )
+
+    indexed = Contract(
+        rep_name=idx_row["[RepCompany]"],
+        plan_name=idx_row["[Product]"],
+        rate_type=RateType.INDEXED,
+        term_months=int(idx_row["[TermValue]"]) if idx_row["[TermValue]"] else 1,
+        energy_charge_per_kwh=0.0,
+        base_monthly_charge=0.0,
+        tdu=TduCharges("Oncor", 4.23, 0.038),
+        indexed_adder_per_kwh=0.010,  # Estimate: 1¢/kWh markup on wholesale
+        avg_price_1000=float(idx_row["[kwh1000]"]),
+        efl_source_file="Wayback Oct 1, 2019",
+    )
+
+    return fixed, variable, indexed
 
 
 def main() -> None:
@@ -113,24 +146,37 @@ def main() -> None:
         print(f"✓ Loaded {data_source}")
 
     usage = synthetic_winter_consumption()
-    fixed = parse_efl(EFL, "SmartEnergy", "SmartGreen 12 (fixed)")
-    indexed = realistic_preuri_indexed()
+
+    # Try to load real Oct 2019 plans; fall back to synthetic
+    plans = load_ptc_oct_2019_plans()
+    if plans:
+        fixed, variable, indexed = plans
+        print(f"✓ Loaded real Oct 2019 plans from Wayback Machine")
+        print(f"  Fixed:   {fixed.rep_name} - {fixed.plan_name}")
+        print(f"  Indexed: {indexed.rep_name} - {indexed.plan_name}\n")
+    else:
+        print("ℹ Using synthetic contracts (Oct 2019 CSV not found)\n")
+        fixed = parse_efl(EFL, "SmartEnergy", "SmartGreen 12 (fixed)")
+        indexed = realistic_preuri_indexed()
+
     price = align_price_to_usage(spp, usage.index)
 
     bill_fixed = simulate_month(usage, fixed)
     bill_indexed = simulate_month(usage, indexed, spp_per_kwh=price)
 
-    print("=== FEBRUARY 2021 BILL  (ILLUSTRATIVE / synthetic price & usage) ===")
+    data_label = "Real Oct 2019 plans & Real ERCOT SPP" if plans and not spp.attrs.get("synthetic") else "Mixed real/synthetic data"
+    print(f"=== FEBRUARY 2021 BILL ({data_label}) ===")
     print(f"  Fixed  : ${bill_fixed['total']:>10,.2f}  "
           f"({bill_fixed['effective_per_kwh']*100:.1f} c/kWh)")
     print(f"  Indexed: ${bill_indexed['total']:>10,.2f}  "
           f"({bill_indexed['effective_per_kwh']*100:.1f} c/kWh)")
-    print(f"  Indexed is {bill_indexed['total']/bill_fixed['total']:.0f}x the fixed bill")
+    ratio = bill_indexed['total']/bill_fixed['total']
+    print(f"  Indexed is {ratio:.1f}x the fixed bill")
 
-    _plot(spp, usage, fixed)
+    _plot(spp, usage, fixed, indexed)
 
 
-def _plot(spp, usage, fixed) -> None:
+def _plot(spp, usage, fixed, indexed) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -138,19 +184,20 @@ def _plot(spp, usage, fixed) -> None:
     price = align_price_to_usage(spp, usage.index)
     cum_fixed = ((fixed.energy_charge_per_kwh + fixed.tdu.per_kwh) * usage).cumsum() \
         + fixed.base_monthly_charge + fixed.tdu.fixed_monthly
-    cum_idx = ((price + 0.038) * usage).cumsum() + 9.99 + 4.23
+    cum_idx = ((price + indexed.indexed_adder_per_kwh + indexed.tdu.per_kwh) * usage).cumsum() \
+        + indexed.base_monthly_charge + indexed.tdu.fixed_monthly
 
     band = (pd.Timestamp("2021-02-15", tz="America/Chicago"),
             pd.Timestamp("2021-02-20", tz="America/Chicago"))
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 7), height_ratios=[2, 1],
                                    sharex=True)
     ax1.plot(cum_fixed.index, cum_fixed.values, lw=2.2, color="#1f6f3d",
-             label="Fixed plan")
+             label=f"Fixed: {fixed.rep_name}")
     ax1.plot(cum_idx.index, cum_idx.values, lw=2.2, color="#b3202c",
-             label="Wholesale pass-through (Griddy-style)")
+             label=f"Indexed: {indexed.rep_name}")
     ax1.set_ylabel("Cumulative cost ($)")
     ax1.legend(loc="upper left", frameon=False)
-    data_label = "real ERCOT SPP" if not spp.attrs.get("synthetic") else "synthetic SPP"
+    data_label = "Real Oct 2019 plans, Real ERCOT SPP" if not spp.attrs.get("synthetic") else "Real Oct 2019 plans, Synthetic SPP"
     ax1.set_title(f"Feb 2021 cumulative cost: same home, same usage  ({data_label})")
     ax1.axvspan(*band, alpha=0.10, color="red")
     ax2.plot(spp.index, spp.values, color="#444", lw=0.8)

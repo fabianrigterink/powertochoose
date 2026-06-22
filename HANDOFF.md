@@ -44,7 +44,9 @@ implemented; ready to consume real CSV once downloaded.
       != stated avg); extract thresholds from EFL prose manually.
 - [x] Build the **normal-month** comparison (all contract types vs a regular
       billing period) to expose advertised-vs-actual and bill-credit band misses.
-- [ ] Write the report around the charts (outline in README).
+- [x] Create comprehensive Uri impact analysis notebook (`notebooks/uri_impact_analysis.ipynb`):
+      simulates bills across 45K contract/home combinations, visualizes cost
+      distributions and market evolution from Feb 2021 crisis to June 2026 recovery.
 
 ## Gotchas to keep in mind (full list in README)
 - Apples-to-apples: always add the SAME TDU + adder stack to indexed sims.
