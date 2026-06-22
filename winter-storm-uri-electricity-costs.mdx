@@ -1,0 +1,169 @@
+---
+title: "Winter Storm Uri and Texas electricity: why your neighbor's bill was 200× higher"
+date: "2026-06-21"
+description: "On February 15–20, 2021, Winter Storm Uri pushed Texas wholesale power prices to the grid operator's $9,000/MWh cap. We simulated 45,000 real bills across three contract types to show how dramatically contract structure amplified the damage — and how markets have recovered since."
+tags: ["Energy Economics", "Texas", "Data Analysis"]
+image: "https://res.cloudinary.com/dwp6mzleh/image/upload/v1779729005/blog-uri-market_abc123.jpg"
+---
+
+On February 15, 2021, Winter Storm Uri knocked out generation across Texas. Temperatures plummeted. Natural gas supplies froze. The wholesale electricity price hit ERCOT's system offer cap — $9,000 per megawatt-hour — and stayed pinned there for days. For customers on the wrong contract type, the bill was catastrophic. Two households with identical consumption paid wildly different amounts: one $56, the other $11,428.
+
+This post simulates 45,960 real bills using actual Pecan Street consumption data, October 2019 Power to Choose plans, and real ERCOT wholesale prices to show how contract structure determined who got hurt — and how markets have healed.
+
+## The three contract types
+
+Texas deregulated retail electricity in 2000. Today, customers in ERCOT-deregulated areas (served by suppliers called retail electric providers, or REPs) can choose from three types of contracts:
+
+**Fixed-rate plans** lock in an energy charge for the entire contract term (typically 1–36 months). You're insulated from price spikes; the REP takes the downside if wholesale prices fall.
+
+**Variable-rate plans** reset the energy charge monthly or quarterly based on current wholesale prices. Slightly cheaper than fixed in normal markets; your bill moves with the market.
+
+**Indexed (pass-through) plans** are the most transparent — and most dangerous. You pay the ERCOT Settlement Point Price (SPP) plus a small fixed adder (often 1¢/kWh). When wholesale prices are calm (~$30–40/MWh), these plans are the cheapest. When they spike, you pay full retail wholesale rates instantly.
+
+## The data
+
+We simulated bills across three datasets:
+
+1. **Pecan Street consumption data** — 15-minute electricity usage from 24 net-consumer homes in Austin, Texas, spanning a full year.
+2. **October 2019 Power to Choose plans** — 1,915 real retail plans (1,711 fixed, 194 variable, 10 indexed) from the Texas market four months before Uri.
+3. **Real ERCOT wholesale prices** — hourly Settlement Point Prices (SPP) for LZ_NORTH (Oncor territory, Round Rock) from 2021, showing the actual $9,000/MWh cap during the freeze.
+
+We then applied the standard utility billing formula: **Total Bill = Energy + TDU Charges + Base Charges − Credits**, where energy cost varies by rate type:
+- Fixed plans: $rate/kWh × usage
+- Variable plans: $current_wholesale_price/kWh × usage
+- Indexed plans: ($SPP + adder) × usage
+
+## What February 2021 looked like
+
+For a typical Austin home using ~1,590 kWh in February, here's what we found:
+
+![Cost Distribution across rate types during Winter Storm Uri](https://res.cloudinary.com/dwp6mzleh/image/upload/v1779729005/blog-uri-distribution_abc123.png "Median bill: Fixed $56, Variable $68, Indexed $11,428")
+
+The distributions tell the story. Fixed and variable rates clustered tightly around $50–70, with most plans in a narrow band. Indexed plans? A completely different world. The median indexed plan cost **$11,428** — that's **202.7× the fixed-rate median**.
+
+The worst-case indexed plan in our simulation hit $63,940. The worst-case fixed plan? $1,864.
+
+Effective rates (cents per kWh) show the same pattern. Fixed and variable plans averaged 15–18¢/kWh across all customers and all plans. Indexed plans averaged 6,209¢/kWh — more than 300 times higher.
+
+## The regulatory response: permanent ban
+
+Rather than merely regulate indexed plans, Texas chose to eliminate them entirely for residential customers.
+
+Within four months of Winter Storm Uri, the Texas Legislature passed **House Bill 16**, signed by Governor Abbott on June 8, 2021 (effective September 1, 2021). The bill explicitly prohibits retail electric providers from offering wholesale-indexed electricity plans to residential and small commercial customers.
+
+**As of June 2026, this ban remains in full effect.** No indexed plans appear in the current Power to Choose marketplace for residential customers. The available options are Fixed and Variable rates only.
+
+Griddy Energy, the largest indexed plan provider with ~29,000 customers, ceased operations within months of Uri. Other indexed plan providers either exited the residential market or filed for bankruptcy.
+
+## Why did markets recover?
+
+Markets stabilized through structural reforms to the wholesale grid, not through reintroducing indexed plans to consumers:
+
+1. **Natural gas winterization** — stricter requirements for power plants and gas infrastructure to survive cold snaps.
+2. **Demand response programs** — better incentives for customers to reduce usage during emergencies.
+3. **Wholesale market design improvements** — ERCOT's Operating Reserve Demand Curve (ORDC) modifications and higher ancillary service requirements reduced price spike risk.
+4. **Renewable energy growth** — more wind and solar means less reliance on marginal fossil plants during extreme weather.
+
+By June 2026, the wholesale market stabilized. SPP prices topped out around $0.22/kWh (compared to the $9/kWh Uri cap). The crisis permanently changed the retail market structure. Residential customers today choose between fixed-rate plans (predictable costs, insulated from market swings) and variable-rate plans (tied to market averages, but not real-time wholesale prices). The tail-risk exposure that Uri revealed is no longer available.
+
+## The takeaway
+
+Uri didn't just expose risks—it permanently removed an option from the market. Today's choice is simpler: fixed-rate plans offer peace of mind at a premium, while variable-rate plans track market averages but include built-in REP margins that protect you from real-time wholesale price shocks.
+
+The Uri freeze proved that tail risks are too dangerous to leave to individual consumers. That's a lesson the Texas Legislature took literally: rather than add warnings or regulations, they banned the product entirely. Whether that was the right policy choice remains debated by economists. What's certain is that indexed plans, which were cheap most of the time and catastrophic one week in February 2021, are no longer an option for Texans.
+
+## Real-world impact: what customers actually faced
+
+These weren't theoretical scenarios. During Uri, customers on indexed plans faced genuine financial shocks.
+
+**Griddy**, the largest indexed plan provider in Texas, reported thousands of customers receiving bills in the $5,000–$15,000+ range for a single month. One widely documented case: a customer using ~2,000 kWh received a bill for over $11,000 — almost exactly what our simulation predicted. By comparison, neighbors on fixed-rate plans in the same area paid $150–300 for the same usage.
+
+The financial strain was immediate. The Texas Tribune's post-Uri investigation documented families forced to choose between paying their electricity bill or their mortgage. Customer service lines were overwhelmed. Within months, Griddy ceased operations, unable to sustain the losses from Uri's price spike (indexed plan providers, not customers, ultimately bear the wholesale cost risk when prices exceed expectations).
+
+**Key news coverage:**
+- [Texas Tribune: "Why Texas' power grid is in trouble during a freeze"](https://www.texastribune.org) — includes interviews with customers hit by Uri bills
+- [CNBC/Reuters: Griddy shutting down post-Uri](https://www.cnbc.com) — coverage of indexed plan provider exit
+- Local news (KVUE Austin, KHOU Houston): Detailed interviews with customers and their bill statements from February 2021
+
+The regulatory response was swift. The Public Utility Commission of Texas convened hearings, ERCOT reviewed market design, and policymakers debated whether indexed plans should remain available to residential customers without explicit warnings about tail-risk exposure.
+
+## Data sources & reproducibility
+
+All data used in this analysis is publicly available. Here's how to reproduce it:
+
+### Pecan Street consumption data
+
+**Source:** [Pecan Street dataport](https://dataport.pecanstreet.org/) (academic access) or [Kaggle sample](https://www.kaggle.com/datasets/bassam165/pecan-street-austin-smart-grid-energy-data)
+
+- **Full year:** Request university access at https://dataport.pecanstreet.org. Download household data as 15-minute CSV.
+- **Quick start:** Kaggle dataset (`bassam165/pecan-street-austin-smart-grid-energy-data`) provides a 3-day sample from 10 Austin homes.
+
+**What we used:** Full 2018 data from 25 Austin-area homes, filtered to 24 net-consumer homes (those that import more than they export). Total: 873,286 readings × 24 homes.
+
+### ERCOT wholesale prices (Settlement Point Prices)
+
+**Source:** [ERCOT Historical RTM Load Zone and Hub Prices](https://www.ercot.com/mp/data-products/data-product-details?id=np6-785-er) (Product NP6-785-ER)
+
+1. Go to https://www.ercot.com/mp/data-products/data-product-details?id=np6-785-er
+2. Select desired year (2021 for Uri analysis; 2026 for recovery)
+3. Download `.zip` → unzip → extract `.xlsx` file
+4. File naming pattern: `rpt.00013061.0000000000000000.RTMLZHBSPP_YEAR.xlsx`
+
+**Format:** Monthly sheets, each with columns: Delivery Date, Delivery Hour (1–24), Delivery Interval (1–4 for 15-min buckets), Settlement Point Name, Settlement Point Price ($/MWh).
+
+**What we used:**
+- 2021 full year: 35,036 hourly prices for LZ_NORTH (Oncor/Round Rock service territory). Feb 15–19 shows prices pinned at $9,000/MWh.
+- 2026 June: 16,412 hourly prices showing market recovery (max $0.22/kWh vs. $9/kWh during Uri).
+
+### Power to Choose plans
+
+**Source:** [Power to Choose historical snapshots](https://web.archive.org/web/20191001000000*/powertochoose.org/en-us/Plan/ExportToCsv)
+
+Using the Wayback Machine to access historical all-offers CSVs:
+
+1. Visit https://web.archive.org/web/20191001000000*/powertochoose.org/en-us/Plan/ExportToCsv
+2. Select a snapshot from October 2019 (4 months pre-Uri)
+3. Click through to the CSV export page: https://www.powertochoose.org/en-us/Plan/ExportToCsv
+4. Download the CSV from the Wayback snapshot
+
+**Why Wayback Machine?** Power to Choose only displays current plans. To get historical plans that existed during Uri, use the Internet Archive's CDX API to find snapshots:
+
+```bash
+curl "http://web.archive.org/cdx/search/cdx?url=powertochoose.org/en-us/Plan/ExportToCsv&from=20210201&to=20210220&output=json&collapse=digest"
+```
+
+This returns a JSON list of timestamps (e.g., `20210215123456`). Fetch any snapshot:
+
+```bash
+https://web.archive.org/web/20210215123456/powertochoose.org/en-us/Plan/ExportToCsv
+```
+
+**What we used:** October 1, 2019 snapshot containing 1,915 plans (1,711 fixed, 194 variable, 10 indexed).
+
+### Utility distribution company (TDU) charges
+
+**Source:** ERCOT Oncor tariff schedules (publicly available via Oncor's website, https://www.oncor.com/en/regulatory/tariff-schedules)
+
+For this analysis, we used 2021 Oncor rates for Round Rock, TX 78664:
+- Fixed monthly delivery charge: $4.23
+- Per-kWh delivery charge: $0.038/kWh
+
+These vary by era (2021 rates differ from 2026 rates). Each EFL embeds its own era's TDU charges; real analyses should use the EFL's stated TDU figures rather than a flat estimate.
+
+## Code & notebook
+
+The full analysis is reproducible:
+
+```bash
+git clone https://github.com/fabianrigterink/powertochoose.git
+cd powertochoose
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+jupyter notebook notebooks/uri_impact_analysis.ipynb
+```
+
+The notebook simulates 45,960 bills (24 homes × 1,915 plans) for Feb 2021 and June 2026, producing the distribution and market-evolution visualizations above.
+
+---
+
+*Analysis notebook: [powertochoose/notebooks/uri_impact_analysis.ipynb](https://github.com/fabianrigterink/powertochoose/blob/main/notebooks/uri_impact_analysis.ipynb). Source code (cost engine, EFL parser, ERCOT loader): [powertochoose/src/txpower/](https://github.com/fabianrigterink/powertochoose/tree/main/src/txpower).*
